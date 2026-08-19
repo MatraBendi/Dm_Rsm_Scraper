@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P&amp;G ár-figyelő – dm.hu &amp; Rossmann</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#12161c; --muted:#5b6673;
+    --line:#e3e7ec; --accent:#1f3864; --accent2:#2f6fd0;
+    --ok:#1a7f4b; --warn:#a35b00; --err:#b3261e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+  header{background:var(--accent);color:#fff;padding:18px 24px}
+  header h1{margin:0;font-size:19px;letter-spacing:.2px}
+  header p{margin:4px 0 0;opacity:.8;font-size:13px}
+  main{max-width:1220px;margin:0 auto;padding:22px 18px 60px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  @media (max-width:960px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        padding:16px 18px;margin-bottom:16px}
+  .card h2{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  label{display:flex;gap:8px;align-items:flex-start;padding:3px 0;cursor:pointer;font-size:14px}
+  input[type=checkbox],input[type=radio]{margin-top:3px;accent-color:var(--accent2)}
+  .store{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+  .store.sel{border-color:var(--accent2);background:#f0f6ff}
+  .store small{color:var(--muted);display:block;margin-left:24px;font-size:12px}
+  .group{border-top:1px solid var(--line);padding:10px 0}
+  .group:first-of-type{border-top:none}
+  .group .ghead{display:flex;justify-content:space-between;align-items:center;
+                font-weight:600;font-size:13px;margin-bottom:4px}
+  .group .ghead button{font-size:11px;padding:2px 8px}
+  button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);
+         border-radius:7px;padding:7px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent2);color:var(--accent2)}
+  button.primary{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600;
+                 padding:10px 16px;width:100%}
+  button.primary:hover{background:#245bb0;color:#fff}
+  button.primary:disabled{background:#9fb4d4;border-color:#9fb4d4;cursor:not-allowed}
+  button.ghost{width:100%;margin-top:8px}
+  details summary{cursor:pointer;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .row{display:flex;gap:10px;align-items:center;margin:6px 0;font-size:13px}
+  .row input[type=number],.row select{padding:5px 7px;border:1px solid var(--line);border-radius:6px;width:110px}
+  .bar{height:8px;background:#e8ecf2;border-radius:99px;overflow:hidden;margin:10px 0 6px}
+  .bar span{display:block;height:100%;background:var(--accent2);width:0;transition:width .3s}
+  #log{background:#0f1620;color:#cfe3ff;font:12px/1.55 Consolas,Menlo,monospace;
+       border-radius:8px;padding:10px;height:180px;overflow:auto;white-space:pre-wrap}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+  th{position:sticky;top:0;background:#f2f5f9;font-size:12px;text-transform:uppercase;
+     letter-spacing:.4px;color:var(--muted);cursor:pointer;white-space:nowrap}
+  tbody tr:hover{background:#f7fafd}
+  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;background:#eef2f7;border-radius:99px;padding:1px 8px;font-size:11px;color:var(--muted)}
+  .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  .stat{background:#f2f5f9;border-radius:8px;padding:8px 12px;min-width:104px}
+  .stat b{display:block;font-size:19px;line-height:1.2}
+  .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .toolbar input[type=search],.toolbar select{padding:7px 9px;border:1px solid var(--line);border-radius:7px}
+  .toolbar input[type=search]{flex:1;min-width:180px}
+  .scroll{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .muted{color:var(--muted)}
+  .err{color:var(--err)}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>P&amp;G ár-figyelő – dm.hu &amp; Rossmann</h1>
+  <p>Terméknév · kiszerelés · ár · EAN · dátum → Excel</p>
+</header>
+
+<main>
+<div class="grid">
+
+  <!-- ------------------------------------------------ bal oldal: beállítások -->
+  <div>
+    <div class="card">
+      <h2>1. Bolt</h2>
+      <div class="store sel" data-store="rossmann">
+        <label><input type="checkbox" class="store-cb" value="rossmann" checked> Rossmann (shop.rossmann.hu)</label>
+        <small>Gyors, EAN-nal együtt. Nem kell böngésző.</small>
+      </div>
+      <div class="store" data-store="dm">
+        <label><input type="checkbox" class="store-cb" value="dm"> dm Magyarország (dm.hu)</label>
+        <small>JavaScript-es oldal → Playwright böngésző kell hozzá (lásd README).</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Márkák</h2>
+      <div class="row" style="margin-bottom:6px">
+        <button type="button" onclick="setAll(true)">Mind</button>
+        <button type="button" onclick="setAll(false)">Egyik sem</button>
+        <span class="muted" id="brandCount"></span>
+      </div>
+      {% for group, brands in groups %}
+      <div class="group">
+        <div class="ghead">
+          <span>{{ group }}</span>
+          <button type="button" onclick="setGroup('{{ group }}', true)">mind</button>
+        </div>
+        {% for b in brands %}
+        <label data-group="{{ group }}">
+          <input type="checkbox" class="brand-cb" value="{{ b.key }}" {% if b.default_on %}checked{% endif %}>
+          <span>{{ b.display }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card">
+      <h2>3. Beállítások</h2>
+      <label><input type="checkbox" id="withDetails" checked> Termékoldalak megnyitása (EAN + pontos kiszerelés)</label>
+      <div class="hint">Kikapcsolva sokkal gyorsabb, de EAN nélkül.</div>
+      <details style="margin-top:10px">
+        <summary>Haladó beállítások</summary>
+        <div class="row"><span>Párhuzamos szálak</span><input type="number" id="workers" value="5" min="1" max="12"></div>
+        <div class="row"><span>Késleltetés (mp)</span><input type="number" id="delay" value="0.35" min="0" max="5" step="0.05"></div>
+        <div class="row"><span>Max. termék / márka</span><input type="number" id="maxPer" value="0" min="0"></div>
+        <div class="row"><span>dm mód</span>
+          <select id="dmMode">
+            <option value="auto">automatikus</option>
+            <option value="api">csak API</option>
+            <option value="browser">csak böngésző</option>
+            <option value="static">csak statikus</option>
+          </select>
+        </div>
+        <label style="margin-top:6px"><input type="checkbox" id="showBrowser"> dm: látható böngészőablak (hibakereséshez)</label>
+        <div class="hint">0 = nincs korlát. A késleltetés a boltok kímélése miatt ajánlott.</div>
+      </details>
+      <button class="primary" id="startBtn" style="margin-top:14px">Árak letöltése</button>
+      <button class="ghost" id="stopBtn" style="display:none">Leállítás</button>
+    </div>
+  </div>
+
+  <!-- --------------------------------------------------- jobb oldal: eredmény -->
+  <div>
+    <div class="card" id="progressCard" style="display:none">
+      <h2>Folyamat</h2>
+      <div id="progressText" class="muted">Indulás…</div>
+      <div class="bar"><span id="progressBar"></span></div>
+      <div id="log"></div>
+    </div>
+
+    <div class="card">
+      <h2>Eredmény</h2>
+      <div class="stats">
+        <div class="stat"><b id="sCount">0</b><span>termék</span></div>
+        <div class="stat"><b id="sPrice">0</b><span>árral</span></div>
+        <div class="stat"><b id="sEan">0</b><span>EAN-nal</span></div>
+        <div class="stat"><b id="sBrands">0</b><span>márka</span></div>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="filterText" placeholder="Keresés név, márka, EAN szerint…">
+        <select id="filterStore"><option value="">Minden bolt</option></select>
+        <select id="filterBrand"><option value="">Minden márka</option></select>
+        <select id="filterSize"><option value="">Minden kiszerelés</option></select>
+        <button id="downloadBtn" disabled>Excel letöltése</button>
+      </div>
+      <div class="scroll">
+        <table id="tbl">
+          <thead><tr>
+            <th data-k="store">Bolt</th>
+            <th data-k="brand">Márka</th>
+            <th data-k="name">Terméknév</th>
+            <th data-k="size_label">Kiszerelés</th>
+            <th data-k="price" class="num">Ár (Ft)</th>
+            <th data-k="unit_price">Egységár</th>
+            <th data-k="ean">EAN</th>
+            <th data-k="scraped_date">Dátum</th>
+          </tr></thead>
+          <tbody><tr><td colspan="8" class="muted">Még nincs adat – indíts egy letöltést.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="hint">A táblázat fejlécére kattintva rendezhető. Az Excel három munkalapot tartalmaz:
+        Termékek, Összesítő (márka × kiszerelés), Info.</div>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+let jobId=null, poller=null, rows=[], sortKey="brand", sortDir=1;
+
+function $(s){return document.querySelector(s)}
+function $$(s){return Array.from(document.querySelectorAll(s))}
+
+function setAll(v){$$(".brand-cb").forEach(cb=>cb.checked=v); updateBrandCount();}
+function setGroup(g,v){$$('label[data-group="'+g+'"] .brand-cb').forEach(cb=>cb.checked=v); updateBrandCount();}
+function updateBrandCount(){
+  const n=$$(".brand-cb").filter(c=>c.checked).length;
+  $("#brandCount").textContent=n+" kiválasztva";
+}
+$$(".brand-cb").forEach(cb=>cb.addEventListener("change",updateBrandCount));
+updateBrandCount();
+
+$$(".store-cb").forEach(cb=>cb.addEventListener("change",e=>{
+  e.target.closest(".store").classList.toggle("sel", e.target.checked);
+}));
+
+$("#startBtn").addEventListener("click", async ()=>{
+  const body={
+    stores:$$(".store-cb").filter(c=>c.checked).map(c=>c.value),
+    brands:$$(".brand-cb").filter(c=>c.checked).map(c=>c.value),
+    with_details:$("#withDetails").checked,
+    workers:+$("#workers").value, delay:+$("#delay").value,
+    max_per_brand:+$("#maxPer").value, dm_mode:$("#dmMode").value,
+    show_browser:$("#showBrowser").checked
+  };
+  const r=await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},
+                                 body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.error){alert(d.error);return;}
+  jobId=d.job;
+  $("#startBtn").disabled=true; $("#stopBtn").style.display="block";
+  $("#progressCard").style.display="block"; $("#log").textContent="";
+  poller=setInterval(poll,1200); poll();
+});
+
+$("#stopBtn").addEventListener("click", async ()=>{
+  if(jobId) await fetch("/api/stop/"+jobId,{method:"POST"});
+  $("#stopBtn").disabled=true;
+});
+
+async function poll(){
+  if(!jobId) return;
+  const r=await fetch("/api/status/"+jobId); const s=await r.json();
+  $("#log").textContent=(s.log||[]).join("\n");
+  $("#log").scrollTop=$("#log").scrollHeight;
+  const p=s.progress||{};
+  const pct=p.total? Math.round(100*p.current/p.total):0;
+  $("#progressBar").style.width=pct+"%";
+  $("#progressText").textContent = s.status==="running"
+    ? (p.store? p.store+": "+p.current+" / "+p.total+" ("+pct+"%)" : "Előkészítés…")
+    : "Állapot: "+s.status;
+  $("#sCount").textContent=s.count; $("#sPrice").textContent=s.with_price;
+  $("#sEan").textContent=s.with_ean;
+  if(["done","error","stopped"].includes(s.status)){
+    clearInterval(poller); poller=null;
+    $("#startBtn").disabled=false; $("#stopBtn").style.display="none"; $("#stopBtn").disabled=false;
+    await loadResults();
+    $("#downloadBtn").disabled=!s.excel_ready;
+  }
+}
+
+async function loadResults(){
+  const r=await fetch("/api/results/"+jobId); const d=await r.json();
+  rows=d.products||[];
+  fillFilter("#filterStore","store"); fillFilter("#filterBrand","brand"); fillFilter("#filterSize","size_label");
+  $("#sBrands").textContent=new Set(rows.map(x=>x.brand)).size;
+  render();
+}
+
+function fillFilter(sel,key){
+  const el=$(sel), cur=el.value;
+  const vals=Array.from(new Set(rows.map(r=>r[key]).filter(Boolean))).sort();
+  el.innerHTML='<option value="">'+el.options[0].text+'</option>'+
+    vals.map(v=>'<option>'+esc(v)+'</option>').join("");
+  el.value=cur;
+}
+
+["#filterText","#filterStore","#filterBrand","#filterSize"].forEach(s=>
+  $(s).addEventListener("input",render));
+
+$$("#tbl th").forEach(th=>th.addEventListener("click",()=>{
+  const k=th.dataset.k; sortDir = (k===sortKey)? -sortDir : 1; sortKey=k; render();
+}));
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmt(n){return n==null?"":Number(n).toLocaleString("hu-HU")}
+
+function render(){
+  const q=$("#filterText").value.toLowerCase().trim();
+  const fs=$("#filterStore").value, fb=$("#filterBrand").value, fz=$("#filterSize").value;
+  let data=rows.filter(r=>{
+    if(fs && r.store!==fs) return false;
+    if(fb && r.brand!==fb) return false;
+    if(fz && r.size_label!==fz) return false;
+    if(q && !((r.name||"")+" "+(r.brand||"")+" "+(r.ean||"")).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  data.sort((a,b)=>{
+    let x=a[sortKey], y=b[sortKey];
+    if(typeof x==="number"||typeof y==="number"){x=x??-1;y=y??-1;return (x-y)*sortDir;}
+    return String(x??"").localeCompare(String(y??""),"hu")*sortDir;
+  });
+  const tb=$("#tbl tbody");
+  if(!data.length){tb.innerHTML='<tr><td colspan="8" class="muted">Nincs találat.</td></tr>';return;}
+  tb.innerHTML=data.map(r=>`<tr>
+    <td><span class="tag">${esc(r.store)}</span></td>
+    <td>${esc(r.brand)}</td>
+    <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
+    <td>${esc(r.size_label)}</td>
+    <td class="num">${r.price==null?'<span class="err">–</span>':fmt(r.price)}</td>
+    <td>${esc(r.unit_price)}</td>
+    <td>${esc(r.ean)}</td>
+    <td>${esc(r.scraped_date)}</td></tr>`).join("");
+}
+
+$("#downloadBtn").addEventListener("click",()=>{ if(jobId) location.href="/api/download/"+jobId; });
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>P&amp;G árfigyelő – dm.hu &amp; Rossmann</title>
+<style>
+  :root{
+    --bg:#f6f7f9;--card:#fff;--ink:#12161c;--muted:#5b6673;--line:#e3e7ec;
+    --accent:#1f3864;--accent2:#2f6fd0;--up:#b3261e;--down:#1a7f4b;--radius:10px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#11151a;--card:#181d24;--ink:#e8ecf1;--muted:#94a1b0;--line:#252c35;
+          --accent:#0f1620;--accent2:#63a0ff;--up:#ff8a80;--down:#6ee7a8}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+  header{background:var(--accent);color:#fff;padding:16px 22px;
+         display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;justify-content:space-between}
+  header h1{margin:0;font-size:18px;letter-spacing:.2px}
+  header .when{font-size:13px;opacity:.85}
+  main{max-width:1300px;margin:0 auto;padding:18px 16px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        padding:14px 16px;margin-bottom:14px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap}
+  .stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 14px;min-width:104px}
+  .stat b{display:block;font-size:20px;line-height:1.2}
+  .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 10px}
+  input[type=search],select,button{font:inherit;padding:7px 10px;border:1px solid var(--line);
+        border-radius:7px;background:var(--card);color:var(--ink)}
+  input[type=search]{flex:1;min-width:200px}
+  button{cursor:pointer}
+  button:hover{border-color:var(--accent2);color:var(--accent2)}
+  button.pri{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600}
+  button.pri:hover{background:#245bb0;color:#fff}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .tabs button{border-radius:99px;padding:6px 14px}
+  .tabs button[aria-selected=true]{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .scroll{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{position:sticky;top:0;background:var(--bg);cursor:pointer;white-space:nowrap;
+     font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);z-index:1}
+  tbody tr:hover{background:rgba(127,127,127,.07)}
+  a{color:var(--accent2)}
+  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .up{color:var(--up);font-weight:600}
+  .down{color:var(--down);font-weight:600}
+  .tag{display:inline-block;background:rgba(127,127,127,.14);border-radius:99px;
+       padding:1px 9px;font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .muted{color:var(--muted)}
+  .foot{font-size:12px;color:var(--muted);margin-top:10px}
+  .err{background:#fde8e6;border:1px solid #f3b9b3;color:#8c1d18;padding:14px;border-radius:8px}
+  @media (prefers-color-scheme:dark){.err{background:#3a1a18;border-color:#6b2d28;color:#ffb4ab}}
+</style>
+</head>
+<body>
+<header>
+  <h1>P&amp;G árfigyelő — dm.hu &amp; Rossmann</h1>
+  <div class="when" id="when">betöltés…</div>
+</header>
+
+<main>
+  <div id="error" style="display:none" class="card"><div class="err"></div></div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><b id="sTotal">–</b><span>termék</span></div>
+      <div class="stat"><b id="sPrice">–</b><span>árral</span></div>
+      <div class="stat"><b id="sEan">–</b><span>EAN-nal</span></div>
+      <div class="stat"><b id="sBrand">–</b><span>márka</span></div>
+      <div class="stat"><b id="sChg">–</b><span>árváltozás</span></div>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Keresés: terméknév, márka, EAN…">
+      <select id="fStore"><option value="">Minden bolt</option></select>
+      <select id="fGroup"><option value="">Minden kategória</option></select>
+      <select id="fBrand"><option value="">Minden márka</option></select>
+      <select id="fSize"><option value="">Minden kiszerelés</option></select>
+      <label class="muted" style="display:flex;gap:6px;align-items:center">
+        <input type="checkbox" id="onlyChanged"> csak az árváltozások
+      </label>
+      <a href="data/PG_arak_latest.xlsx" download><button class="pri">Excel letöltése</button></a>
+      <button id="csvBtn">Szűrt nézet CSV</button>
+      <a href="data/history.csv" download><button>Teljes idősor CSV</button></a>
+    </div>
+    <div class="tabs">
+      <button id="tabList" aria-selected="true">Termékek</button>
+      <button id="tabPivot" aria-selected="false">Összesítő (márka × kiszerelés)</button>
+    </div>
+
+    <div class="scroll" id="listWrap">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="store">Bolt</th>
+          <th data-k="brand">Márka</th>
+          <th data-k="name">Terméknév</th>
+          <th data-k="size_label">Kiszerelés</th>
+          <th data-k="price" class="num">Ár (Ft)</th>
+          <th data-k="change" class="num">Változás</th>
+          <th data-k="unit_price">Egységár</th>
+          <th data-k="ean">EAN</th>
+          <th data-k="scraped_date">Dátum</th>
+        </tr></thead>
+        <tbody><tr><td colspan="9" class="muted">Betöltés…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="scroll" id="pivotWrap" style="display:none">
+      <table id="pivot"><thead></thead><tbody></tbody></table>
+    </div>
+
+    <div class="foot">
+      Az adatok a webshopok nyilvános online listaárai a fenti időpontban; az üzletekben
+      eltérő ár lehet érvényben. Az oldal naponta automatikusan frissül.
+    </div>
+  </div>
+</main>
+
+<script>
+let ALL=[], VIEW=[], sortKey="brand", sortDir=1, mode="list";
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num=n=>n==null?"":Number(n).toLocaleString("hu-HU",{maximumFractionDigits:0});
+
+fetch("data/latest.json?_="+Date.now())
+  .then(r=>{ if(!r.ok) throw new Error("A data/latest.json még nem érhető el ("+r.status+")."); return r.json(); })
+  .then(init)
+  .catch(e=>{
+    $("#error").style.display="block";
+    $("#error .err").innerHTML="<b>Nincs még adat.</b><br>"+esc(e.message)+
+      "<br>Futtasd le a GitHub <i>Actions → Napi ár-scrape → Run workflow</i> gombjával, "+
+      "és pár perc múlva frissítsd az oldalt.";
+    $("#tbl tbody").innerHTML='<tr><td colspan="9" class="muted">–</td></tr>';
+    $("#when").textContent="nincs adat";
+  });
+
+function init(d){
+  ALL=d.products||[];
+  $("#when").textContent="Frissítve: "+(d.generated_at||"").replace("T"," ").slice(0,16)+
+                         "  ·  boltok: "+(d.stores||[]).join(", ");
+  $("#sTotal").textContent=num(d.counts?.total);
+  $("#sPrice").textContent=num(d.counts?.with_price);
+  $("#sEan").textContent=num(d.counts?.with_ean);
+  $("#sBrand").textContent=num((d.brands||[]).length);
+  $("#sChg").textContent=num(d.counts?.changed);
+  fill("#fStore","store"); fill("#fGroup","brand_group"); fill("#fBrand","brand"); fill("#fSize","size_label");
+  render();
+}
+
+function fill(sel,key){
+  const el=$(sel), first=el.options[0].text;
+  const vals=[...new Set(ALL.map(r=>r[key]).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),"hu",{numeric:true}));
+  el.innerHTML='<option value="">'+first+'</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join("");
+}
+
+["#q","#fStore","#fGroup","#fBrand","#fSize","#onlyChanged"].forEach(s=>{
+  $(s).addEventListener("input",()=>{ if(s==="#fGroup") refreshBrandFilter(); render(); });
+});
+
+function refreshBrandFilter(){
+  const g=$("#fGroup").value, cur=$("#fBrand").value;
+  const vals=[...new Set(ALL.filter(r=>!g||r.brand_group===g).map(r=>r.brand))].sort();
+  $("#fBrand").innerHTML='<option value="">Minden márka</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join("");
+  if(vals.includes(cur)) $("#fBrand").value=cur;
+}
+
+$$("#tbl th").forEach(th=>th.addEventListener("click",()=>{
+  const k=th.dataset.k; sortDir=(k===sortKey)?-sortDir:1; sortKey=k; render();
+}));
+
+$("#tabList").addEventListener("click",()=>setMode("list"));
+$("#tabPivot").addEventListener("click",()=>setMode("pivot"));
+function setMode(m){
+  mode=m;
+  $("#tabList").setAttribute("aria-selected",m==="list");
+  $("#tabPivot").setAttribute("aria-selected",m==="pivot");
+  $("#listWrap").style.display=m==="list"?"":"none";
+  $("#pivotWrap").style.display=m==="pivot"?"":"none";
+  render();
+}
+
+function filtered(){
+  const q=$("#q").value.toLowerCase().trim();
+  const fs=$("#fStore").value, fg=$("#fGroup").value, fb=$("#fBrand").value, fz=$("#fSize").value;
+  const onlyChanged=$("#onlyChanged").checked;
+  return ALL.filter(r=>{
+    if(fs&&r.store!==fs) return false;
+    if(fg&&r.brand_group!==fg) return false;
+    if(fb&&r.brand!==fb) return false;
+    if(fz&&r.size_label!==fz) return false;
+    if(onlyChanged&&!r.change) return false;
+    if(q&&!((r.name||"")+" "+(r.brand||"")+" "+(r.ean||"")).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function render(){
+  VIEW=filtered();
+  if(mode==="pivot") return renderPivot();
+  const data=[...VIEW].sort((a,b)=>{
+    let x=a[sortKey],y=b[sortKey];
+    if(x==null&&y==null) return 0;
+    if(typeof x==="number"||typeof y==="number") return ((x??-1)-(y??-1))*sortDir;
+    return String(x??"").localeCompare(String(y??""),"hu",{numeric:true})*sortDir;
+  });
+  const tb=$("#tbl tbody");
+  if(!data.length){tb.innerHTML='<tr><td colspan="9" class="muted">Nincs találat.</td></tr>';return;}
+  tb.innerHTML=data.map(r=>{
+    let chg='<span class="muted">–</span>';
+    if(r.change){
+      const cls=r.change>0?"up":"down", sign=r.change>0?"+":"";
+      chg=`<span class="${cls}">${sign}${num(r.change)} Ft${r.change_pct!=null?` (${sign}${r.change_pct}%)`:""}</span>`;
+    }
+    return `<tr>
+      <td><span class="tag">${esc(r.store)}</span></td>
+      <td>${esc(r.brand)}</td>
+      <td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.name)}</a></td>
+      <td>${esc(r.size_label)}</td>
+      <td class="num">${r.price==null?'<span class="muted">–</span>':num(r.price)}</td>
+      <td class="num">${chg}</td>
+      <td>${esc(r.unit_price)}</td>
+      <td>${esc(r.ean)}</td>
+      <td>${esc(r.scraped_date)}</td></tr>`;
+  }).join("");
+}
+
+function renderPivot(){
+  const stores=[...new Set(VIEW.map(r=>r.store))].sort();
+  const map=new Map();
+  VIEW.forEach(r=>{
+    if(r.price==null) return;
+    const k=r.brand_group+"||"+r.brand+"||"+(r.size_label||"n/a");
+    if(!map.has(k)) map.set(k,{});
+    const cell=map.get(k);
+    (cell[r.store]=cell[r.store]||[]).push(r.price);
+  });
+  const head=["Kategória","Márka","Kiszerelés",...stores.map(s=>s+" – átlagár"),"Különbség"];
+  $("#pivot thead").innerHTML="<tr>"+head.map(h=>`<th>${esc(h)}</th>`).join("")+"</tr>";
+  const rows=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"hu",{numeric:true}));
+  if(!rows.length){ $("#pivot tbody").innerHTML='<tr><td class="muted">Nincs adat.</td></tr>'; return; }
+  $("#pivot tbody").innerHTML=rows.map(([k,cell])=>{
+    const [g,b,z]=k.split("||");
+    const avgs=[];
+    const tds=stores.map(s=>{
+      const v=cell[s];
+      if(!v) return '<td class="num muted">–</td>';
+      const a=v.reduce((x,y)=>x+y,0)/v.length; avgs.push(a);
+      return `<td class="num">${num(Math.round(a))}${v.length>1?` <span class="muted">(${v.length})</span>`:""}</td>`;
+    }).join("");
+    const diff=avgs.length>1?Math.round(Math.max(...avgs)-Math.min(...avgs)):null;
+    return `<tr><td>${esc(g)}</td><td>${esc(b)}</td><td>${esc(z)}</td>${tds}
+      <td class="num">${diff==null?'<span class="muted">–</span>':num(diff)}</td></tr>`;
+  }).join("");
+}
+
+$("#csvBtn").addEventListener("click",()=>{
+  const cols=["scraped_date","store","brand_group","brand","name","size_label","size_value",
+              "size_unit","price","prev_price","change","unit_price","ean","url"];
+  const head=["Datum","Bolt","Kategoria","Marka","Termeknev","Kiszereles","Mennyiseg",
+              "Egyseg","Ar","Elozo ar","Valtozas","Egysegar","EAN","URL"];
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const csv="﻿"+[head.join(";")].concat(VIEW.map(r=>cols.map(c=>q(r[c])).join(";"))).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download="PG_arak_szurt.csv"; a.click(); URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>
