@@ -1,0 +1,93 @@
+name: Napi ár-scrape
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      boltok:
+        description: "Melyik boltok"
+        type: choice
+        default: mindketto
+        options: [mindketto, rossmann, dm]
+      max_markankent:
+        description: "Max. termék márkánként (0 = nincs korlát; teszthez pl. 5)"
+        type: string
+        default: "0"
+      keses:
+        description: "Késleltetés kérések között, másodperc"
+        type: string
+        default: "0.8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Repó letöltése
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Függőségek
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Chromium (a dm.hu-hoz)
+        if: ${{ github.event.inputs.boltok != 'rossmann' }}
+        run: python -m playwright install --with-deps chromium
+
+      - name: Paraméterek összeállítása
+        id: cfg
+        run: |
+          case "${{ github.event.inputs.boltok }}" in
+            rossmann) echo "boltok=rossmann" >> "$GITHUB_OUTPUT" ;;
+            dm)       echo "boltok=dm" >> "$GITHUB_OUTPUT" ;;
+            *)        echo "boltok=rossmann dm" >> "$GITHUB_OUTPUT" ;;
+          esac
+          echo "maxper=${{ github.event.inputs.max_markankent || '0' }}" >> "$GITHUB_OUTPUT"
+          echo "keses=${{ github.event.inputs.keses || '0.8' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Scrape futtatása
+        run: |
+          python scrape_ci.py \
+            --bolt ${{ steps.cfg.outputs.boltok }} \
+            --szalak 3 \
+            --keses ${{ steps.cfg.outputs.keses }} \
+            --max-markankent ${{ steps.cfg.outputs.maxper }}
+
+      - name: Eredmény visszacommitolása
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data
+          if git diff --staged --quiet; then
+            echo "Nincs változás – nincs commit."
+          else
+            git commit -m "Árfrissítés: $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Excel feltöltése artifactként
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-arak-excel
+          path: |
+            docs/data/PG_arak_latest.xlsx
+            docs/data/history.csv
+          if-no-files-found: warn
+          retention-days: 30
